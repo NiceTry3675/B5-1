@@ -29,7 +29,107 @@ menu_items      1 ── N order_items
 
 예를 들어 고객 한 명은 여러 주문을 만들 수 있으므로 `customers.customer_id`를 `orders.customer_id`가 FK로 참조합니다. 주문 하나에는 여러 메뉴가 들어갈 수 있으므로 `orders.order_id`를 `order_items.order_id`가 참조합니다.
 
-## 3. 파일 구성
+## 3. 설계 및 개념 설명 요약
+
+### 3.1 테이블을 나눈 이유
+
+처음에는 주문 데이터를 엑셀처럼 한 표에 모두 넣을 수도 있습니다.
+
+```text
+주문번호 | 고객명 | 전화번호 | 메뉴명 | 메뉴가격 | 수량
+1       | 김민준 | 010...  | 아메리카노 | 4500 | 1
+1       | 김민준 | 010...  | 카페라떼   | 5000 | 1
+```
+
+하지만 이렇게 저장하면 같은 고객 정보와 메뉴 정보가 여러 줄에 반복됩니다. 전화번호나 메뉴 가격이 바뀌면 여러 행을 모두 수정해야 해서 데이터가 서로 어긋날 위험이 큽니다.
+
+그래서 이 과제에서는 데이터를 역할별로 분리했습니다.
+
+| 테이블 | 나눈 이유 |
+| --- | --- |
+| `customers` | 고객 이름, 전화번호, 등급처럼 고객 자체의 정보를 한 번만 저장 |
+| `menu_categories` | Coffee, Bakery 같은 메뉴 분류를 중복 없이 관리 |
+| `menu_items` | 메뉴명, 가격, 판매 여부를 메뉴 단위로 관리 |
+| `orders` | 주문 일시, 주문 방식, 상태, 총액처럼 주문 한 건의 정보를 저장 |
+| `order_items` | 주문 한 건에 들어간 여러 메뉴와 수량을 저장 |
+
+이 구조에서는 고객 정보는 `customers`에 한 번만 저장하고, 주문은 `customer_id`로 고객을 참조합니다. 이것이 엑셀과 관계형 DB의 큰 차이입니다. DB는 단순히 표를 저장하는 도구가 아니라, 테이블 사이의 관계와 제약조건으로 데이터 정합성을 지키는 도구입니다.
+
+### 3.2 PK와 FK가 데이터를 연결하는 방식
+
+PK(Primary Key)는 테이블에서 한 행을 고유하게 구분하는 값입니다. FK(Foreign Key)는 다른 테이블의 PK를 참조하는 값입니다.
+
+| 관계 | 의미 | 예시 |
+| --- | --- | --- |
+| `customers.customer_id` -> `orders.customer_id` | 고객 1명은 주문 여러 건을 만들 수 있음 | 김민준 고객은 주문 1번과 6번을 가짐 |
+| `orders.order_id` -> `order_items.order_id` | 주문 1건에는 여러 메뉴가 들어갈 수 있음 | 주문 1번에는 아메리카노와 카페라떼가 들어감 |
+| `menu_items.menu_item_id` -> `order_items.menu_item_id` | 같은 메뉴는 여러 주문상세에서 팔릴 수 있음 | 아메리카노는 여러 주문에서 반복 판매됨 |
+| `menu_categories.category_id` -> `menu_items.category_id` | 카테고리 1개에는 여러 메뉴가 속할 수 있음 | Coffee 카테고리에 아메리카노, 카페라떼, 바닐라라떼가 속함 |
+
+예를 들어 `orders`의 `customer_id = 1`은 `customers.customer_id = 1`인 김민준 고객을 가리킵니다. 존재하지 않는 `customer_id = 999`로 주문을 넣으면 FK 제약조건 때문에 실패합니다. 실제 실패 결과는 `results/fk_error.txt`에 남겼습니다.
+
+### 3.3 컬럼 타입을 선택한 이유
+
+SQLite는 타입이 비교적 유연하지만, 데이터 의미에 맞춰 타입을 정했습니다.
+
+| 타입 | 사용한 컬럼 예 | 선택 이유 |
+| --- | --- | --- |
+| `INTEGER` | `customer_id`, `price`, `quantity`, `total_amount` | id와 금액, 수량처럼 숫자 비교/계산이 필요한 값 |
+| `TEXT` | `name`, `phone`, `email`, `order_date`, `status` | 문자열, 날짜 문자열, 상태값 저장 |
+| `INTEGER CHECK (값 IN (0, 1))` | `is_available` | SQLite에 별도 Boolean 타입이 없으므로 0/1로 판매 여부 표현 |
+| `TEXT CHECK (...)` | `grade`, `order_type`, `status` | 정해진 값만 들어오게 제한해 오타와 잘못된 상태 방지 |
+
+금액은 소수점이 필요 없는 원화 기준이라 `INTEGER`로 저장했습니다. 날짜는 SQLite에서 정렬 가능한 `YYYY-MM-DD HH:MM:SS` 형식의 `TEXT`로 저장했습니다.
+
+### 3.4 INNER JOIN과 LEFT JOIN 결과 해석
+
+`INNER JOIN`은 양쪽 테이블에 연결되는 데이터가 있을 때만 결과에 나옵니다. Q05는 `orders`와 `customers`를 연결해서 주문 12건에 고객 이름을 붙입니다. 주문은 반드시 고객을 참조하므로 주문 12건이 모두 고객 이름과 함께 출력됩니다.
+
+`LEFT JOIN`은 왼쪽 테이블의 행을 모두 남깁니다. Q08은 `customers`를 왼쪽에 두고 `orders`를 붙였기 때문에 주문이 없는 고객도 결과에 나옵니다. 실행 결과에서 `문하늘` 고객은 `order_count = 0`으로 표시됩니다. 이 행이 LEFT JOIN의 특징을 보여줍니다.
+
+### 3.5 GROUP BY와 집계 함수 결과 해석
+
+`GROUP BY`는 같은 기준의 행을 묶고, 묶음마다 계산합니다.
+
+Q09는 `orders.status`별로 주문을 묶습니다. 결과에서 `COMPLETED`는 주문 수가 9건이고 매출 합계가 128900입니다. 즉 `status = 'COMPLETED'`인 여러 주문 행을 하나의 그룹으로 모은 뒤 `COUNT(*)`와 `SUM(total_amount)`를 계산한 것입니다.
+
+Q10은 고객 등급별 평균 주문 금액을 구합니다. `customers`와 `orders`를 JOIN한 뒤 `grade`로 묶고, 각 등급의 `total_amount` 평균을 `AVG`로 계산합니다. Q11은 메뉴별 판매 수량을 `SUM(oi.quantity)`로 더해서 인기 메뉴 TOP 5를 보여줍니다.
+
+### 3.6 인덱스를 건 컬럼과 이유
+
+Q15에서는 `orders(order_date)`에 인덱스를 만들었습니다.
+
+```sql
+CREATE INDEX IF NOT EXISTS idx_orders_order_date ON orders(order_date);
+```
+
+카페 운영에서는 “이번 달 주문”, “최근 7일 주문”, “날짜순 주문 내역”처럼 기간 기준 조회가 자주 발생합니다. `order_date`에 인덱스가 있으면 DB가 모든 주문을 처음부터 끝까지 훑기보다 날짜 범위를 기준으로 더 빠르게 찾을 수 있습니다. 단, 인덱스는 INSERT/UPDATE 때 함께 갱신되어야 하므로 자주 검색하거나 정렬하는 컬럼에만 선택적으로 만드는 것이 좋습니다.
+
+### 3.7 가장 복잡했던 쿼리 설명
+
+가장 복잡한 쿼리는 Q11 메뉴별 판매 수량 TOP 5입니다.
+
+```sql
+SELECT mi.name AS menu_name, SUM(oi.quantity) AS sold_quantity,
+       SUM(oi.quantity * oi.unit_price) AS sales_amount
+FROM order_items AS oi
+INNER JOIN menu_items AS mi ON oi.menu_item_id = mi.menu_item_id
+INNER JOIN orders AS o ON oi.order_id = o.order_id
+WHERE o.status <> 'CANCELED'
+GROUP BY mi.menu_item_id, mi.name
+ORDER BY sold_quantity DESC, sales_amount DESC
+LIMIT 5;
+```
+
+이 쿼리는 먼저 `order_items`에서 실제 판매된 메뉴와 수량을 가져옵니다. 그다음 `menu_items`를 JOIN해서 메뉴 이름을 붙이고, `orders`를 JOIN해서 취소 주문을 제외합니다. 이후 메뉴별로 `GROUP BY`를 하고, `SUM(quantity)`로 판매 수량을 더합니다. 마지막으로 많이 팔린 순서대로 정렬하고 `LIMIT 5`로 상위 5개만 남깁니다.
+
+### 3.8 어려웠던 부분과 해결 방법
+
+가장 어려운 부분은 주문 총액과 주문상세 금액의 관계를 자연스럽게 맞추는 것이었습니다. `orders.total_amount`는 주문 한 건의 총액이고, `order_items`는 메뉴별 `quantity * unit_price`를 저장합니다. 두 값이 맞지 않으면 집계 결과가 어색해지므로 샘플 데이터를 넣을 때 주문상세 금액 합계와 주문 총액이 맞도록 계산했습니다.
+
+또 하나의 어려움은 `DELETE` 실습이 실제 샘플 데이터를 망가뜨리지 않게 하는 것이었습니다. 해결 방법으로 Q13, Q14를 트랜잭션 안에서 실행하고 `ROLLBACK`했습니다. 덕분에 UPDATE/DELETE 결과는 확인할 수 있지만, 다음 쿼리나 재실행에는 원본 데이터가 유지됩니다.
+
+## 4. 파일 구성
 
 ```text
 B5-1/
@@ -57,7 +157,7 @@ B5-1/
 | `results/fk_error.txt` | FK 제약조건 실패 확인 결과 |
 | `explain.md` | DB 개념과 설계 의도 설명 |
 
-## 4. 실행 방법
+## 5. 실행 방법
 
 SQLite CLI가 설치되어 있다면 아래 명령으로 DB를 새로 만들 수 있습니다.
 
@@ -77,7 +177,7 @@ sqlite3 cafe.db < queries.sql > results/query_results.txt
 sqlite3 cafe.db < bonus.sql > results/bonus_results.txt
 ```
 
-## 5. 요구사항 충족 체크
+## 6. 요구사항 충족 체크
 
 | 요구사항 | 충족 내용 |
 | --- | --- |
@@ -92,7 +192,7 @@ sqlite3 cafe.db < bonus.sql > results/bonus_results.txt
 | 결과 확인 자료 | `results/query_results.txt` 작성 |
 | 보너스 과제 | `bonus.sql`, `results/bonus_results.txt`, `explain.md`에 정리 |
 
-## 6. 쿼리 범위
+## 7. 쿼리 범위
 
 `queries.sql`에는 아래 범주의 쿼리가 들어 있습니다.
 
@@ -107,7 +207,7 @@ sqlite3 cafe.db < bonus.sql > results/bonus_results.txt
 
 수정과 삭제 실습은 `BEGIN TRANSACTION` 후 결과를 확인하고 `ROLLBACK`합니다. 그래서 쿼리를 실행해도 샘플 데이터 원본은 유지됩니다.
 
-## 7. 보너스 과제
+## 8. 보너스 과제
 
 보너스 과제도 함께 정리했습니다.
 
