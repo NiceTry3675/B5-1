@@ -141,6 +141,8 @@ B5-1/
   README.md
   explain.md
   results/
+    cafe-db-erd.png
+    cafe-db-relationships.png
     query_results.txt
     bonus_results.txt
     fk_error.txt
@@ -155,6 +157,8 @@ B5-1/
 | `results/query_results.txt` | 실제 SQLite 실행 결과 텍스트 |
 | `results/bonus_results.txt` | 보너스 과제 실행 결과 텍스트 |
 | `results/fk_error.txt` | FK 제약조건 실패 확인 결과 |
+| `results/cafe-db-erd.png` | 현재 DB 구조 ERD 이미지 |
+| `results/cafe-db-relationships.png` | 1:N 관계 학습용 시각화 이미지 |
 | `explain.md` | DB 개념과 설계 의도 설명 |
 
 ## 5. 실행 방법
@@ -216,3 +220,15 @@ sqlite3 cafe.db < bonus.sql > results/bonus_results.txt
 | 조인 1개를 두 방식으로 풀기 | `bonus.sql`의 BONUS 1-A, 1-B, 1-C |
 | 데이터 정합성 깨뜨려 보기 | `bonus.sql`의 BONUS 2, `results/fk_error.txt`, `explain.md`의 FK 오류 예시 |
 | 미니 리포트 만들기 | `bonus.sql`의 BONUS 3-1 ~ 3-3, `explain.md`의 핵심 지표 3개 |
+
+## 9. 시각화 자료
+
+현재 DB 구조를 이미지로도 확인할 수 있습니다.
+
+![Cafe Order Database ERD](results/cafe-db-erd.png)
+
+위 ERD는 5개 테이블, PK/FK 컬럼, 1:N 관계를 한 장에 정리한 자료입니다.
+
+![Cafe Order Database Relationships](results/cafe-db-relationships.png)
+
+위 이미지는 각 1:N 관계가 실제 카페 주문 도메인에서 어떤 의미인지 예시 중심으로 설명한 자료입니다.
