@@ -1,0 +1,65 @@
+BONUS 1-A. 같은 요구를 JOIN으로 풀기: 주문이 있는 고객 목록과 주문 횟수를 조회한다.
+customer_id  name  order_count
+-----------  ----  -----------
+1            김민준   2          
+2            이서연   2          
+3            박지호   1          
+4            최하윤   1          
+5            정도윤   1          
+6            강수아   1          
+7            윤서준   1          
+8            장유진   1          
+9            한지민   1          
+10           오예린   1          
+
+BONUS 1-B. 같은 요구를 서브쿼리로 풀기: 주문이 있는 고객 목록과 주문 횟수를 조회한다.
+customer_id  name  order_count
+-----------  ----  -----------
+1            김민준   2          
+2            이서연   2          
+3            박지호   1          
+4            최하윤   1          
+5            정도윤   1          
+6            강수아   1          
+7            윤서준   1          
+8            장유진   1          
+9            한지민   1          
+10           오예린   1          
+
+BONUS 1-C. 비교: JOIN은 여러 테이블을 한 결과 집합으로 연결해 집계할 때 자연스럽고, 서브쿼리는 바깥 행마다 조건을 따로 계산하는 생각을 표현하기 좋다.
+두 쿼리는 같은 결과를 만들지만, 주문 수 집계처럼 연결된 데이터를 묶어 계산할 때는 JOIN + GROUP BY가 보통 더 읽기 쉽다.
+
+BONUS 2. 데이터 정합성 깨뜨려 보기: 존재하지 않는 고객 999의 주문은 FK 때문에 실패해야 한다.
+아래 INSERT는 직접 실행하면 FOREIGN KEY constraint failed 오류가 난다.
+INSERT INTO orders (order_id, customer_id, order_date, order_type, status, total_amount)
+VALUES (999, 999,  2024-06-10 10:00:00 ,  STORE ,  PAID , 5000);
+
+BONUS 2-B. 올바른 해결: 먼저 존재하는 customer_id를 사용하거나 customers에 고객을 먼저 추가해야 한다.
+customer_id  name
+-----------  ----
+1            김민준 
+
+BONUS 3-1. 미니 리포트: 주문 상태별 매출 합계
+status     order_count  total_sales
+---------  -----------  -----------
+COMPLETED  9            128900     
+READY      1            15600      
+PAID       1            4500       
+CANCELED   1            0          
+
+BONUS 3-2. 미니 리포트: 메뉴별 판매 수량 TOP 5
+menu_name  sold_quantity  sales_amount
+---------  -------------  ------------
+레몬에이드      4              24000       
+카페라떼       4              20000       
+햄치즈 샌드위치   3              23400       
+아메리카노      3              13500       
+크루아상       3              12600       
+
+BONUS 3-3. 미니 리포트: 고객 등급별 평균 주문 금액
+grade   avg_order_amount
+------  ----------------
+VIP     17033.3         
+SILVER  13300.0         
+GOLD    12166.7         
+BASIC   11600.0         
